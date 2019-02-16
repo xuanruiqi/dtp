@@ -125,6 +125,15 @@ ins x (Node c validL validR l v r) with (compare x v)
     ins x (Node c validL _ l v r)     | _ | T _ _         = balanceR c l v (ins x r) validL rightValidPrf
       where rightValidPrf = rewrite (sym insR) in (validAnyBlack c)
 
+
+blacken : Tree d c a -> Tree (incrBlack d (inv c)) Black a
+blacken Leaf = Leaf
+blacken (Node c _ _ l v r) with (c)
+  | Red = Node Black () () l v r
+  | Black = Node Black () () l v r
+
+
 export
-insert : Ord a => a -> Tree d c a -> (d : Nat ** (c : Color ** Tree d c a))
-insert x t = (_ ** (_ ** fixInsTree (ins x t)))
+insert : Ord a => a -> Tree d Black a -> (d : Nat ** Tree d Black a)
+insert {d = d} x t with (ins x t) 
+  | T _ t' = (_ ** blacken t')
