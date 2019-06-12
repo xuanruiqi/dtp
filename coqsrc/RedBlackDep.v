@@ -34,24 +34,23 @@ Module Tree (X : OrderedTypeFull').
   
   Inductive tree : nat -> color -> Type :=
   | Leaf : tree 0 Black
-  | Node : forall d cl cr c, color_valid c cl -> color_valid c cr ->
-                        tree d cl -> t -> tree d cr -> tree (incr_black d c) c.
+  | Node : forall d cl cr c,
+      color_valid c cl -> color_valid c cr ->
+      tree d cl -> t -> tree d cr -> tree (incr_black d c) c.
   
   Equations RNode {d} (l : tree d Black) (v : t) (r : tree d Black) :
     tree d Red :=
     RNode l v r := Node Red _ _ l v r.
-
   
   Equations BNode {d cl cr} (l : tree d cl) (v : t) (r : tree d cr) :
     tree (S d) Black :=
-    BNode l v r := Node Black _ _ l v r.
-  
+    BNode l v r := Node Black _ _ l v r. 
   
   Inductive ins_tree : nat -> color -> Type :=
   | T : forall d c pc, tree d c -> ins_tree d pc
   | Fix : forall d,
       tree d Black -> t -> tree d Black -> t -> tree d Black -> ins_tree d Red.
-  
+  Derive Signature for ins_tree.
   
   Definition ins_tree_color {d c} (t : ins_tree d c) :=
     match t with
@@ -123,17 +122,30 @@ Module Tree (X : OrderedTypeFull').
 
   Equations blacken {d c} (tr : tree d c) : tree (incr_black d (inv c)) Black :=
     blacken Leaf := Leaf;
-    blacken (Node c _ _ l v r) with c => {
-      | Black := BNode l v r;
-      | Red := BNode l v r
-    }.
+    blacken (Node Black _ _ l v r) := BNode l v r;
+    blacken (Node Red _ _ l v r) := BNode l v r.
 
-  Notation "{< x >}" := (sigmaI _ _ x).
-  Import Sigma_Notations.
-
-  Equations insert {d} (x : t) (tr : tree d Black) : &{d' : nat & tree d' Black} :=
+  Equations insert {d} (x : t) (tr : tree d Black) : {d' : nat & tree d' Black} :=
     insert x tr with (ins x tr) := {
-      | T _ t' => {<blacken t'>}
+      | T _ t' => existT _ _ (blacken t')
     }.
+
+  Inductive tree_ml :=
+  | LeafML : tree_ml
+  | NodeML : color -> tree_ml -> t -> tree_ml -> tree_ml.
+
+  Fixpoint from_dep {d c} (t : tree d c) :=
+    match t with
+    | Leaf => LeafML
+    | Node c _ _ l v r => NodeML c (from_dep l) v (from_dep r)
+    end.
+  
+  Definition insert_ml {d} (x : t) (tr : tree d Black) : tree_ml :=
+    match insert x tr with
+    | existT _ _ res => from_dep res
+    end.
   
 End Tree.
+
+
+Extraction Tree.
