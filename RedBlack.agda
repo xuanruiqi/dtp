@@ -6,7 +6,6 @@ open import Relation.Binary
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; subst; sym; inspect; [_])
 open Eq.≡-Reasoning
-open import Data.Vec hiding (insert)
 open import Data.Product
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Unit using (⊤; tt)
