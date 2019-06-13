@@ -1,4 +1,5 @@
--- Xuanrui Qi, with contributions from Jacques Garrigue & Kazunari Tanaka
+-- Copyright 2019, Xuanrui Qi
+-- Original algorithm by: Jacques Garrigue, Xuanrui Qi & Kazunari Tanaka
 open import Data.Nat hiding (compare)
 open import Data.Nat.Properties
 open import Relation.Binary
@@ -101,3 +102,36 @@ module RedBlack
   insert : ∀ {d} → A → Tree d Black → ∃ (λ d' → Tree d' Black)
   insert {d = d} x t with ins x t
   ... | T {c = c} _ t' = (incr-Black d (inv c) , blacken t')
+
+  -- Deletion algorithm
+  data DelTree : ℕ → Color → Set c where
+    Stay : ∀ {d c} cₚ → color-valid c (inv cₚ) → Tree d c → DelTree d cₚ
+    Down : ∀ {d} → Tree d Black → DelTree (suc d) Black
+
+  bal-right : ∀ {d cₗ cᵣ} c → Tree d cₗ → A → DelTree d cᵣ → color-valid c cₗ → color-valid c cᵣ → DelTree (incr-Black d c) c
+  bal-right {cₗ = Black} Red l v (Stay {c = Black} _ _ r) _ _ = Stay Red tt (RNode l v r)
+  bal-right {cₗ = Black} Red l v (Stay {c = Red} Red _ _) _ ()
+  bal-right Red (Node {cᵣ = Black} Black _ _ t₁ x t₂) y (Down t₃) _ _ = Stay Red tt (BNode t₁ x (RNode t₂ y t₃))
+  bal-right Red (Node {cᵣ = Red} Black _ _ t₁ x (Node _ _ _ t₂ y t₃)) z (Down t₄) _ _ = Stay Red tt (RNode (BNode t₁ x t₂) y (BNode t₃ z t₄))
+  bal-right Black l v (Stay _ _ r) _ _ = Stay Black tt (BNode l v r)
+  bal-right Black (Node {cᵣ = Red} Black _ _ t₁ x (Node _ _ _ t₂ y t₃)) z (Down t₄) _ _ = Stay Black tt (BNode (BNode t₁ x t₂) y (BNode t₃ z t₄))
+  bal-right Black (Node {cₗ = Black} {cᵣ = Black} Red _ _ t₁ x (Node {cᵣ = Black} _ _ _ t₂ y t₃)) z (Down t₄) _ _ =
+    Stay Black tt (BNode t₁ x (BNode t₂ y (RNode t₃ z t₄)))
+  bal-right Black (Node {cₗ = Black} {cᵣ = Black} Red _ _ t₁ x (Node {cᵣ = Red} _ _ _ t₂ y (Node {cₗ = Black} {cᵣ = Black} _ _ _ t₃ z t₄))) w (Down t₅) _ _ =
+    Stay Black tt (BNode t₁ x (RNode (BNode t₂ y t₃) z (BNode t₄ w t₅)))
+  bal-right Black (Node {cᵣ = Black} Black _ _ t₁ x t₂) y (Down t₃) _ _ = Down (BNode t₁ x (RNode t₂ y t₃))
+  
+  bal-left : ∀ {d cₗ cᵣ} c → DelTree d cₗ → A → Tree d cᵣ → color-valid c cₗ → color-valid c cᵣ → DelTree (incr-Black d c) c
+  bal-left {cₗ = Black} {cᵣ = Black} Red (Stay {c = Black} _ _ l) v r _ _ = Stay Red tt (RNode l v r)
+  bal-left {cₗ = Black} {cᵣ = Black} Red (Stay {c = Red} _ () l) v r _ _
+  bal-left {cₗ = Black} {cᵣ = Black} Red (Down t₁) x (Node {cₗ = Red} _ _ _ (Node {cₗ = Black} {cᵣ = Black} _ _ _ t₂ y t₃) z t₄) _ _ =
+    Stay Red tt (RNode (BNode t₁ x t₂) y (BNode t₃ z t₄))
+  bal-left {cₗ = Black} {cᵣ = Black} Red (Down t₁) x (Node {cₗ = Black} _ _ _ t₂ y t₃) _ _ = Stay Red tt (BNode (RNode t₁ x t₂) y t₃)
+  bal-left Black (Stay _ _ l) v r _ _ = Stay Black tt (BNode l v r)
+  bal-left {cᵣ = Black} Black (Down t₁) x (Node {cₗ = Red} Black _ _ (Node {cₗ = Black} {cᵣ = Black} _ _ _ t₂ y t₃) z t₄) _ _ =
+    Stay Black tt (BNode (BNode t₁ x t₂) y (BNode t₃ z t₄))
+  bal-left {cᵣ = Red} Black (Down t₁) x (Node {cₗ = Black} {cᵣ = Black} _ _ _ (Node {cₗ = Red} Black _ _ (Node {cₗ = Black} {cᵣ = Black} _ _ _ t₂ y t₃) z t₄) w t₅) _ _ =
+    Stay Black tt (BNode (BNode t₁ x t₂) y (RNode (BNode t₃ z t₄) w t₅))
+  bal-left {cᵣ = Red} Black (Down t₁) x (Node {cₗ = Black} {cᵣ = Black} _ _ _ (Node {cₗ = Black} _ _ _ t₂ y t₃) z t₄) _ _ =
+    Stay Black tt (BNode (BNode (RNode t₁ x t₂) y t₃) z t₄) 
+  bal-left {cᵣ = Black} Black (Down t₁) x (Node {cₗ = Black} _ _ _ t₂ y t₃) _ _ = Down (BNode (RNode t₁ x t₂) y t₃)
