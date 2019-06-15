@@ -144,8 +144,36 @@ Module Tree (X : OrderedTypeFull').
     match insert x tr with
     | existT _ _ res => from_dep res
     end.
-  
-End Tree.
 
+  Inductive del_tree : nat -> color -> Type :=
+  | Stay : forall {d c} pc, color_valid c (inv pc) -> tree d c -> del_tree d pc
+  | Down : forall {d}, tree d Black -> del_tree (S d) Black.
+  Derive Signature for del_tree.
+  
+  Fail Equations balright {d cl cr} c
+    (l : tree d cl) (v : t) (r : del_tree d cr) 
+    (valid_l : color_valid c cl)
+    (valid_r : color_valid c cr) :
+    del_tree (incr_black d c) c :=
+    balright (cl := Black) Red l v (@Stay _ Black _ _ r) _ _ := Stay Red _ (RNode l v r);
+    balright (cl := Black) Red l v (@Stay _ Red Red _ _) _ !;
+    balright (cl := Black) Red (@Node _ _ Black ?(Black) _ _ t1 x t2) y (Down t3) _ _ :=
+      Stay Red _ (BNode t1 x (RNode t2 y t3));
+    balright (cl := Black) Red (@Node _ _ Red ?(Black) _ _ t1 x (Node _ _ _ t2 y t3))
+      z (Down t4) _ _ :=
+      Stay Red _ (RNode (BNode t1 x t2) y (BNode t3 z t4));
+    balright Black l v (Stay _ _ r) _ _ := Stay Black _ (BNode l v r);
+    balright Black (@Node _ _ Red Black _ _ t1 x (Node _ _ _ t2 y t3)) z (Down t4) _ _ :=
+      Stay Black _ (BNode t1 x (BNode t2 y (BNode t3 z t4)));
+    balright Black (@Node _ Black Black Red _ _ t1 x (@Node _ _ Black _ _ _ t2 y t3))
+      z (Down t4) _ _ :=
+      Stay Black _ (BNode t1 x (BNode t2 y (RNode t3 z t4)));
+    balright Black (@Node _ Black Black Red _ _ t1 x (@Node _ _ Red _ _ _ t2 y 
+                    (@Node _ Black Black _ _ _ t3 z t4))) w (Down t5) _ _ :=
+      Stay Black _ (BNode t1 x (RNode (BNode t2 y t3) z (BNode t4 w t5)));
+    balright Black (@Node _ _ Black Black _ _ t1 x t2) y (Down t3) _ _ :=
+      Down (BNode t1 x (RNode t2 y t3)).
+
+End Tree.
 
 Extraction Tree.
